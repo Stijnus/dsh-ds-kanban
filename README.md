@@ -1,60 +1,56 @@
----
-description: "Install and operate the DS Kanban live task board in a DeepSeek Harness Web profile."
-kind: "package-bundle"
----
-
 # dsh-ds-kanban
 
 English | [中文](README.zh.md)
 
 ## Summary
 
-DS Kanban is an external bundle-format plugin for DeepSeek Harness Web 0.1.2-alpha.1. It adds a sidebar action and a full-shell live board without replacing the Harness application shell or storing a second task database. Session, Workspace, projection, pending-interaction, and connection services remain authoritative; the plugin stores only Inbox/Ready placement and presentation preferences in the existing authenticated settings capability. The current checkout installs the layer into the local `web` profile with the commands below.
+DS Kanban is an external bundle-format plugin for DeepSeek Harness Web. It adds a sidebar action and a full-shell live board without replacing the Harness application shell or storing a second task database. Session, Workspace, projection, pending-interaction, and connection services remain authoritative; the plugin stores only Inbox/Ready placement and presentation preferences in the existing authenticated settings capability. The package is installable into any profile with the `dsh plugin` commands below and requires a Harness release on the `0.1.2-alpha.1` service vocabulary or newer.
 
 ## Table of Contents
 
-- [Use this package](#use-this-package)
+- [Install this package](#install-this-package)
 - [Operate the board](#operate-the-board)
 - [Understand the implementation](#understand-the-implementation)
 - [Security and privacy](#security-and-privacy)
 - [Supported and unavailable capabilities](#supported-and-unavailable-capabilities)
+- [Build from source](#build-from-source)
 - [Troubleshooting](#troubleshooting)
 - [Model Experience](#model-experience)
 - [Known Limitations and Deferred Work](#known-limitations-and-deferred-work)
 
 -----
 
-<a id="use-this-package"></a>
-## Use this package
+<a id="install-this-package"></a>
+## Install this package
 
-### Install dependencies, verify, and build
+Prerequisites: a DeepSeek Harness install with the `dsh` CLI and a target profile (the Web profile exposes the full board). Install, update, or removal changes profile composition and Client bundle discovery, so restart the profile's Host afterward. Choose one channel:
 
-Run these commands from the DeepSeek Harness repository root:
+**npm (no build permission needed):**
 
 ```text
-pnpm install --dir plugins/ds-kanban
-pnpm --dir plugins/ds-kanban typecheck
-pnpm --dir plugins/ds-kanban build
-pnpm --dir plugins/ds-kanban test
+dsh plugin --profile <name> add dsh-ds-kanban
 ```
 
-The test command reads the built Client artifact, so build it before testing after a clean checkout. The browser compatibility check rejects the removed `@deepseek-ai/dsh-client-runtime` import and any unexpected external `require()` call.
-
-### Install into the local Web profile
+**Pinned git (source install; pnpm runs the package's `prepare` build once):**
 
 ```text
-pnpm dsh plugin --profile web add ./plugins/ds-kanban
-pnpm dsh --profile web --port 3080
+dsh plugin --profile <name> add github:Stijnus/dsh-ds-kanban#<sha-or-tag>
 ```
 
-Open the printed loopback URL, then select **DS Kanban** in the sidebar. An already-running Host must be restarted after an install, update, or removal because profile composition and Client bundle discovery happen during Host startup.
+A git install fetches sources, so pnpm ≥10 refuses the `prepare` build until it is allowed: copy the exact package key pnpm prints into the profile's `pnpm-workspace.yaml` `allowBuilds` map and re-run the `add`. Pin a commit or tag so a later push cannot silently change what runs; treat the allowance as permission to execute the package's build on your machine.
 
-### Update or remove
+**Release tarball (no build permission needed):**
 
-Rebuild and repeat the `add` command to reconcile an updated checkout. Remove the package and its ordered profile layer without deleting Harness sessions or Workspace data:
+Download `dsh-ds-kanban-<version>.tgz` from the [GitHub Releases](https://github.com/Stijnus/dsh-ds-kanban/releases) page, then:
 
 ```text
-pnpm dsh plugin --profile web remove dsh-ds-kanban
+dsh plugin --profile <name> add ./dsh-ds-kanban-<version>.tgz
+```
+
+After the add and a Host restart, select **DS Kanban** in the sidebar. Update by adding the newer version of the package; remove the package and its ordered profile layer without deleting Harness sessions or Workspace data:
+
+```text
+dsh plugin --profile <name> remove dsh-ds-kanban
 ```
 
 Removing the package stops loading the board. The `ds-kanban` settings section remains user-owned data unless the operator explicitly removes it.
@@ -85,16 +81,28 @@ The plugin makes no external network request, starts no server, executes no brow
 
 Current Harness APIs expose live Session state, Workspace membership and archive state, pending user interactions, model and preset projections, completed steps, token usage, context pressure, cancellation, Session navigation, and direct subagent Session counts.
 
-The current APIs do not expose authoritative cost, task start/runtime history, durable completion timestamps for “completed today,” tool-call totals, Git branch/worktree, changed-file count, or short final-result summaries in the task list projection. They also do not expose pin/unpin or unarchive actions. DS Kanban labels aggregate cost, runtime sorting, and completed-today statistics unavailable, omits unavailable card metrics, and never synthesizes them.
+The current APIs do not expose authoritative cost, task start/runtime history, durable completion timestamps for "completed today," tool-call totals, Git branch/worktree, changed-file count, or short final-result summaries in the task list projection. They also do not expose pin/unpin or unarchive actions. DS Kanban labels aggregate cost, runtime sorting, and completed-today statistics unavailable, omits unavailable card metrics, and never synthesizes them.
+
+<a id="build-from-source"></a>
+## Build from source
+
+```text
+pnpm install
+pnpm typecheck
+pnpm build
+pnpm test
+```
+
+The test command reads the built Client artifact, so build it before testing after a clean checkout. The browser compatibility check rejects the removed `@deepseek-ai/dsh-client-runtime` import and any unexpected external `require()` call. Development happens on the `main` branch; releases are tagged `vX.Y.Z` and shipped by the `ci.yml` and `release.yml` workflows.
 
 <a id="troubleshooting"></a>
 ## Troubleshooting
 
-- **No sidebar entry:** rebuild, repeat the profile `add` command, and restart the Web Host. Inspect Host startup output for a failed bundle row.
+- **No sidebar entry:** rebuild, repeat the profile `add` command, and restart the profile's Host. Inspect Host startup output for a failed bundle row.
 - **Preferences show memory only:** the Host profile does not expose the settings namespace to this Client connection. Board operation continues, but preference writes are not durable.
 - **Disconnected indicator:** the board preserves the last received snapshots while the existing Harness connection loop reconnects. Use Refresh after connection recovery if the list remains stale.
 - **A metric or action is missing:** open Diagnostics in the board. Unsupported capabilities stay disabled or absent by design.
-- **Client loader failure:** run `pnpm --dir plugins/ds-kanban build` and `pnpm --dir plugins/ds-kanban test`; the bundle test lists the supported external modules.
+- **Client loader failure:** run `pnpm build` and `pnpm test`; the bundle test lists the supported external modules.
 
 <a id="model-experience"></a>
 ## Model Experience
@@ -111,6 +119,6 @@ The board projects top-level tasks and counts direct subagent Sessions; it does 
 <details>
 <summary>Working context for maintainers — click to expand</summary>
 
-The bundle targets the 0.1.2-alpha.1 Client service vocabulary and deliberately has no compatibility path for the removed `dsh-client-runtime` package.
+The bundle targets the `0.1.2-alpha.1` Client service vocabulary and deliberately has no compatibility path for the removed `dsh-client-runtime` package. Standalone devDependencies pin the `@deepseek-ai/dsh-*` snapshot the code is proven against (`0.1.2-alpha.3`); peerDependencies stay `>=0.1.2-alpha.1`. To pick up a newer alpha, bump the devDependencies to the newest published `0.1.2-alpha.x`, re-run the suite, and release the result as a new version.
 
 </details>

@@ -1,60 +1,56 @@
----
-description: "在 DeepSeek Harness Web profile 中安装并运行 DS Kanban 实时任务看板。"
-kind: "package-bundle"
----
-
 # dsh-ds-kanban
 
 [English](README.md) | 中文
 
 ## 概要
 
-DS Kanban 是面向 DeepSeek Harness Web 0.1.2-alpha.1 的树外 bundle 格式插件。它增加一个侧边栏入口和一个全壳层实时看板，不替换 Harness 应用壳，也不保存第二份任务数据库。Session、Workspace、projection、待处理交互和连接服务始终是权威数据源；插件只在现有的认证 settings 能力中保存 Inbox/Ready 位置和显示偏好。下列命令把当前 checkout 安装到本机 `web` profile。
+DS Kanban 是面向 DeepSeek Harness Web 的树外 bundle 格式插件。它增加一个侧边栏入口和一个全壳层实时看板，不替换 Harness 应用壳，也不保存第二份任务数据库。Session、Workspace、projection、待处理交互和连接服务始终是权威数据源；插件只在现有的认证 settings 能力中保存 Inbox/Ready 位置和显示偏好。本包可通过下面的 `dsh plugin` 命令安装到任何 profile，要求 Harness 版本处于 `0.1.2-alpha.1` 服务词汇或更新。
 
 ## 目录
 
-- [使用本包](#use-this-package)
+- [安装本包](#install-this-package)
 - [操作看板](#operate-the-board)
 - [理解实现](#understand-the-implementation)
 - [安全与隐私](#security-and-privacy)
 - [支持与不可用能力](#supported-and-unavailable-capabilities)
+- [从源码构建](#build-from-source)
 - [故障排查](#troubleshooting)
 - [模型体验](#model-experience)
 - [已知限制与后续工作](#known-limitations-and-deferred-work)
 
 -----
 
-<a id="use-this-package"></a>
-## 使用本包
+<a id="install-this-package"></a>
+## 安装本包
 
-### 安装依赖、验证并构建
+前置条件：已安装带 `dsh` CLI 的 DeepSeek Harness，并有目标 profile（Web profile 提供完整看板）。安装、更新或移除会改变 profile 组合和 Client bundle 发现，因此之后需要重启该 profile 的 Host。任选一种渠道：
 
-在 DeepSeek Harness 仓库根目录中运行：
+**npm（无需构建许可）：**
 
 ```text
-pnpm install --dir plugins/ds-kanban
-pnpm --dir plugins/ds-kanban typecheck
-pnpm --dir plugins/ds-kanban build
-pnpm --dir plugins/ds-kanban test
+dsh plugin --profile <name> add dsh-ds-kanban
 ```
 
-测试命令会读取已构建的 Client 产物，因此干净 checkout 需要先构建再测试。浏览器兼容测试会拒绝已删除的 `@deepseek-ai/dsh-client-runtime` import 和任何意外的外部 `require()` 调用。
-
-### 安装到本机 Web profile
+**固定 git 引用（源码安装；pnpm 会运行一次包的 `prepare` 构建）：**
 
 ```text
-pnpm dsh plugin --profile web add ./plugins/ds-kanban
-pnpm dsh --profile web --port 3080
+dsh plugin --profile <name> add github:Stijnus/dsh-ds-kanban#<sha-or-tag>
 ```
 
-打开命令输出的 loopback URL，再从侧边栏选择 **DS 看板**。安装、更新或移除后必须重启已经运行的 Host，因为 profile 组合和 Client bundle 发现发生在 Host 启动期间。
+git 安装拉取的是源码，因此 pnpm ≥10 会先拒绝 `prepare` 构建，直到显式允许：把 pnpm 打印的包键原样复制进 profile 的 `pnpm-workspace.yaml` 的 `allowBuilds` 映射，再重新执行 `add`。固定 commit 或 tag，避免后续推送静默改变所运行的内容；并把这个允许视为在你的机器上执行该包构建的许可。
 
-### 更新或移除
+**发布 tarball（无需构建许可）：**
 
-重新构建并再次执行 `add` 命令即可协调更新后的 checkout。以下命令移除包及其有序 profile 层，但不会删除 Harness Session 或 Workspace 数据：
+从 [GitHub Releases](https://github.com/Stijnus/dsh-ds-kanban/releases) 页面下载 `dsh-ds-kanban-<version>.tgz`，然后：
 
 ```text
-pnpm dsh plugin --profile web remove dsh-ds-kanban
+dsh plugin --profile <name> add ./dsh-ds-kanban-<version>.tgz
+```
+
+执行 `add` 并重启 Host 后，从侧边栏选择 **DS 看板**。添加更新版本即可完成更新；以下命令移除包及其有序 profile 层，但不会删除 Harness Session 或 Workspace 数据：
+
+```text
+dsh plugin --profile <name> remove dsh-ds-kanban
 ```
 
 移除包后看板不再加载。除非操作者明确删除，否则 `ds-kanban` settings 节仍是用户数据并会保留。
@@ -87,14 +83,26 @@ Host 不增加 HTTP route。浏览器变更复用 Web profile 已公开且经过
 
 当前 API 不在任务列表 projection 中提供权威成本、任务开始/运行历史、用于“今日完成”的持久完成时间戳、工具调用总数、Git 分支/worktree、变更文件数或简短最终结果摘要。API 也不提供置顶/取消置顶或取消归档操作。DS Kanban 将汇总成本、运行时间排序和今日完成统计标为不可用，省略不可用的卡片指标，并且绝不合成这些值。
 
+<a id="build-from-source"></a>
+## 从源码构建
+
+```text
+pnpm install
+pnpm typecheck
+pnpm build
+pnpm test
+```
+
+测试命令会读取已构建的 Client 产物，因此干净 checkout 需要先构建再测试。浏览器兼容测试会拒绝已删除的 `@deepseek-ai/dsh-client-runtime` import 和任何意外的外部 `require()` 调用。开发在 `main` 分支进行；发布以 `vX.Y.Z` tag 标记，由 `ci.yml` 和 `release.yml` workflow 交付。
+
 <a id="troubleshooting"></a>
 ## 故障排查
 
-- **没有侧边栏入口：** 重新构建，再次执行 profile `add`，并重启 Web Host。检查 Host 启动输出中是否有失败的 bundle 行。
+- **没有侧边栏入口：** 重新构建，再次执行 profile `add`，并重启该 profile 的 Host。检查 Host 启动输出中是否有失败的 bundle 行。
 - **偏好显示仅内存：** Host profile 没有向该 Client 连接公开 settings namespace。看板仍可工作，但偏好写入不会持久化。
 - **断开连接指示：** 现有 Harness 连接循环重连时，看板会保留最后收到的 snapshot。连接恢复后若列表仍陈旧，请使用刷新。
 - **某项指标或操作缺失：** 打开看板中的诊断。设计上，不支持的能力保持禁用或不显示。
-- **Client loader 失败：** 运行 `pnpm --dir plugins/ds-kanban build` 和 `pnpm --dir plugins/ds-kanban test`；bundle 测试会列出支持的外部模块。
+- **Client loader 失败：** 运行 `pnpm build` 和 `pnpm test`；bundle 测试会列出支持的外部模块。
 
 <a id="model-experience"></a>
 ## 模型体验
@@ -111,6 +119,6 @@ Host 不增加 HTTP route。浏览器变更复用 Web profile 已公开且经过
 <details>
 <summary>维护者工作上下文——点击展开</summary>
 
-该 bundle 面向 0.1.2-alpha.1 Client service vocabulary，并明确不为已删除的 `dsh-client-runtime` 包提供兼容路径。
+该 bundle 面向 `0.1.2-alpha.1` Client service vocabulary，并明确不为已删除的 `dsh-client-runtime` 包提供兼容路径。独立版 devDependencies 固定代码已验证的 `@deepseek-ai/dsh-*` 快照（`0.1.2-alpha.3`）；peerDependencies 保持 `>=0.1.2-alpha.1`。要升级到更新的 alpha，请把 devDependencies 提升到最新发布的 `0.1.2-alpha.x`，重新运行测试套件，并把结果作为新版本发布。
 
 </details>

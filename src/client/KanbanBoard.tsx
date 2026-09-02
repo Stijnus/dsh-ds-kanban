@@ -1,7 +1,7 @@
 /** Full-size live operations board rendered inside the existing Harness shell. */
 import {
   memo, useCallback, useEffect, useMemo, useRef, useState,
-  type DragEvent, type KeyboardEvent as ReactKeyboardEvent,
+  type ReactNode, type DragEvent, type KeyboardEvent as ReactKeyboardEvent,
 } from 'react'
 import { createPortal } from 'react-dom'
 import {
@@ -15,7 +15,7 @@ import type { KanbanBoardProps, PresetOption } from './contracts.ts'
 import { workspaceId } from './contracts.ts'
 import { DENSITIES, DEFAULT_SETTINGS, SORT_ORDERS, TIME_MODES, type Density, type KanbanSettings, type SortOrder, type TimeMode } from '../settings.ts'
 import { exportCsv, exportJson } from './export.ts'
-import { AgentList } from './AgentList.tsx'
+import { AgentTree } from './AgentTree.tsx'
 import { useModalFocus } from './focus.ts'
 
 /** Initial per-column DOM budget; operators can reveal further cards in bounded pages. */
@@ -54,15 +54,15 @@ function statusKey(column: BoardColumn): `status.${BoardColumn}` {
 }
 
 interface CardProps {
+  readonly children?: ReactNode
   readonly card: BoardCard
   readonly settings: KanbanSettings
   readonly props: KanbanBoardProps
 }
 
 /** Render one session's execution state, durable goal, and navigation actions. */
-export const TaskCard = memo(function TaskCard({ card, settings, props }: CardProps) {
+export const TaskCard = memo(function TaskCard({ card, settings, props, children }: CardProps) {
   const { t } = props
-  const [agentsOpen, setAgentsOpen] = useState(false)
   const attention = attentionReason(card, settings.contextWarningPercent)
   const reportFailure = (cause: unknown): void => {
     props.actions.setError(cause instanceof Error ? cause.message : String(cause))
@@ -112,7 +112,6 @@ export const TaskCard = memo(function TaskCard({ card, settings, props }: CardPr
             {t('card.context', { percent: Math.round(card.contextPercent) })}
           </span>
         )}
-        {card.subagents > 0 && <span>{t('card.subagents', { count: card.subagents })}</span>}
       </div>
       {card.goal !== undefined && <div className="dsk-goal">
         <strong>{t(`goal.${card.goal.goal.phase}`)}</strong>
@@ -138,10 +137,7 @@ export const TaskCard = memo(function TaskCard({ card, settings, props }: CardPr
         event.stopPropagation()
         props.openTask(card.id as SessionId)
       }}>{t(`attention.${attention}`)}</button>}
-      <div className="dsk-agents" onClick={event => { event.stopPropagation() }}>
-        <button type="button" aria-expanded={agentsOpen} onClick={() => { setAgentsOpen(value => !value) }}>{t(agentsOpen ? 'agents.hide' : 'agents.show')}</button>
-        {agentsOpen && <AgentList parentId={card.id as SessionId} props={props} ancestors={[card.id]} />}
-      </div>
+      {children}
       <div className="dsk-card-foot">
         <span>{t('card.lastActivity', {
           time: settings.timeMode === 'absolute'
@@ -201,7 +197,7 @@ function BoardColumnView({ column, cards, allCards, settings, props }: ColumnPro
     >
       <header><h2>{props.t(`column.${column}`)}</h2><span>{cards.length}</span></header>
       <div className="dsk-card-list">
-        {visibleCards.map(card => <TaskCard key={card.id} card={card} settings={settings} props={props} />)}
+        {visibleCards.map(card => <TaskCard key={card.id} card={card} settings={settings} props={props}><AgentTree parentId={card.id as SessionId} props={props} /></TaskCard>)}
         {visibleCards.length < cards.length && <button className="dsk-show-more" type="button" onClick={() => {
           setLimit(current => current + COLUMN_CARD_PAGE_SIZE)
         }}>{props.t('column.showMore', { visible: visibleCards.length, total: cards.length })}</button>}

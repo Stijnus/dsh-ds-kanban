@@ -1,5 +1,5 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`expanded agents > records catalog-only agent presentation in en 1`] = `"Direct subagents: 1 running / 1 totalResearchRunningModel details unavailableRefresh agents"`;
+exports[`expanded agents > records catalog-only agent presentation in en 1`] = `"Direct subagents: 1 running / 1 totalResearchRunningContinuableModel details unavailableRefresh agents"`;
 
-exports[`expanded agents > records catalog-only agent presentation in zh 1`] = `"直接子 Agent：1 个运行中，共 1 个Research运行中模型详情不可用刷新 Agent"`;
+exports[`expanded agents > records catalog-only agent presentation in zh 1`] = `"直接子 Agent：1 个运行中，共 1 个Research运行中可继续模型详情不可用刷新 Agent"`;

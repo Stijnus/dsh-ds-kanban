@@ -196,6 +196,7 @@ function BoardColumnView({ column, cards, allCards, settings, props }: ColumnPro
       }}
     >
       <header><h2>{props.t(`column.${column}`)}</h2><span>{cards.length}</span></header>
+      {cards.length === 0 && <p className="dsk-column-empty">{props.t('column.empty')}</p>}
       <div className="dsk-card-list">
         {visibleCards.map(card => <TaskCard key={card.id} card={card} settings={settings} props={props}><AgentTree parentId={card.id as SessionId} props={props} /></TaskCard>)}
         {visibleCards.length < cards.length && <button className="dsk-show-more" type="button" onClick={() => {
@@ -211,7 +212,9 @@ function Columns({ cards, settings, props }: {
   readonly settings: KanbanSettings
   readonly props: KanbanBoardProps
 }) {
-  return <div className="dsk-columns">{BOARD_COLUMNS.map(column => (
+  const focused = BOARD_COLUMNS.find(column => column === settings.status)
+  const columns = focused === undefined ? BOARD_COLUMNS : [focused]
+  return <div className="dsk-columns" data-focused={focused !== undefined || undefined}>{columns.map(column => (
     <BoardColumnView
       key={column}
       column={column}
@@ -372,7 +375,7 @@ export function KanbanBoard(props: KanbanBoardProps) {
   }
   const statButton = (label: string, value: string | number, status?: string) => status === undefined
     ? <div className="dsk-stat"><strong>{value}</strong><span>{label}</span></div>
-    : <button className="dsk-stat" type="button" aria-pressed={settings.status === status} onClick={() => { set('status', status) }}>
+    : <button className="dsk-stat" data-status={status || "all"} type="button" aria-pressed={settings.status === status} onClick={() => { set('status', status) }}>
       <strong>{value}</strong><span>{label}</span>
     </button>
   const renderBoard = (scopeCards: readonly BoardCard[]) => <Columns cards={scopeCards} settings={settings} props={props} />
@@ -395,7 +398,7 @@ export function KanbanBoard(props: KanbanBoardProps) {
           </div>
         </div>
         <nav>
-          <button type="button" onClick={() => { props.actions.setNewTaskOpen(true) }}>
+          <button className="dsk-primary" type="button" onClick={() => { props.actions.setNewTaskOpen(true) }}>
             <IconPlusOutline16 size={14} /><span>{props.t('newTask')}</span>
           </button>
           <button type="button" onClick={() => { props.actions.setDiagnosticsOpen(true) }}>{props.t('diagnostics')}</button>
@@ -419,7 +422,6 @@ export function KanbanBoard(props: KanbanBoardProps) {
         {statButton(props.t('stats.blocked'), stats.blocked, 'blocked')}
         {statButton(props.t('stats.completed'), stats.completed, 'done')}
         {statButton(props.t('stats.tokens'), compactNumber(stats.tokens))}
-        {statButton(props.t('stats.cost'), props.t('unavailable'))}
         {statButton(props.t('stats.context'), stats.averageContext === undefined ? props.t('unavailable') : `${Math.round(stats.averageContext)}%`)}
         {statButton(props.t('stats.workspaces'), stats.workspaces)}
       </section>
@@ -427,6 +429,7 @@ export function KanbanBoard(props: KanbanBoardProps) {
         <label className="dsk-search"><span>{props.t('filters.search')}</span><input ref={searchRef} type="search" value={search} placeholder={props.t('filters.searchPlaceholder')} onChange={event => { setSearch(event.target.value) }} /></label>
         <label><span>{props.t('filters.workspace')}</span><select value={settings.workspace} onChange={event => { set('workspace', event.target.value) }}><option value="">{props.t('filters.allWorkspaces')}</option>{workspaces.items.map(item => <option key={item.workspaceId} value={item.workspaceId}>{item.title}</option>)}</select></label>
         <label><span>{props.t('filters.status')}</span><select value={settings.status} onChange={event => { set('status', event.target.value) }}><option value="">{props.t('filters.allStatuses')}</option><option value="attention">{props.t('filters.attention')}</option>{BOARD_COLUMNS.map(column => <option key={column} value={column}>{props.t(`column.${column}`)}</option>)}</select></label>
+        <details className="dsk-view-options"><summary>{props.t('filters.options')}</summary><div className="dsk-options-grid">
         <label><span>{props.t('filters.presetModel')}</span><select value={settings.presetModel} onChange={event => { set('presetModel', event.target.value) }}><option value="">{props.t('filters.allPresetModels')}</option>{presetModels.map(value => <option key={value}>{value}</option>)}</select></label>
         <label><span>{props.t('filters.sort')}</span><select value={settings.sort} onChange={event => { set('sort', event.target.value as SortOrder) }}>{SORT_ORDERS.map(value => <option key={value} value={value} disabled={value === 'runtime' || value === 'cost'}>{props.t(`sort.${value}`)}</option>)}</select></label>
         <label><span>{props.t('filters.density')}</span><select value={settings.density} onChange={event => { set('density', event.target.value as Density) }}>{DENSITIES.map(value => <option key={value} value={value}>{props.t(`density.${value}`)}</option>)}</select></label>
@@ -434,6 +437,7 @@ export function KanbanBoard(props: KanbanBoardProps) {
         <label className="dsk-check"><input type="checkbox" checked={settings.activeOnly} onChange={event => { set('activeOnly', event.target.checked) }} />{props.t('filters.activeOnly')}</label>
         <label className="dsk-check"><input type="checkbox" checked={settings.includeArchived} onChange={event => { set('includeArchived', event.target.checked) }} />{props.t('filters.includeArchived')}</label>
         <label className="dsk-check"><input type="checkbox" checked={settings.groupByWorkspace} onChange={event => { set('groupByWorkspace', event.target.checked) }} />{props.t('filters.groupWorkspace')}</label>
+        </div></details>
       </section>
       <main className="dsk-board-scroll">
         {sessions.phase === 'pending' ? <div className="dsk-state">{props.t('loading')}</div>

@@ -59,7 +59,7 @@ function boardProps(
       select({ phase: 'ready', ids: [], byId: {} }),
     useWorkspaces: (select: (snapshot: { items: unknown[]; archivedSessionIds: string[] }) => unknown) =>
       select({ items: [], archivedSessionIds: [] }),
-    useSessionPendingInteraction: (select: (snapshot: Set<string>) => unknown) => select(new Set()),
+    useSessionPendingInteraction: (select: (snapshot: Map<string, unknown>) => unknown) => select(new Map()),
     useRuntime: (select: (snapshot: Record<string, unknown>) => unknown) => select({}),
     useConnectionGeneration: (select: (snapshot: number) => unknown) => select(1),
     actions: {
@@ -211,7 +211,7 @@ describe('modal focus and submission', () => {
 describe('board controls', () => {
   it('keeps informational totals out of the button tab order', () => {
     render(<KanbanBoard {...boardProps({ open: true }, {})} />)
-    for (const name of ['stats.tokens', 'stats.cost', 'stats.context', 'stats.workspaces']) {
+    for (const name of ['stats.tokens', 'stats.context', 'stats.workspaces']) {
       expect(screen.queryByRole('button', { name: new RegExp(name) })).toBeNull()
       expect(screen.getByText(name)).toBeDefined()
     }
@@ -237,5 +237,20 @@ describe('board controls', () => {
     expect(document.activeElement).toBe(screen.getByRole('dialog'))
     fireEvent.keyDown(document.activeElement!, { key: 'Tab', shiftKey: true })
     expect(document.activeElement).toBe(screen.getByRole('button', { name: 'diagnostics.close' }))
+  })
+})
+
+
+describe('focused board layout', () => {
+  it('renders only the selected status column and keeps view options collapsed', () => {
+    const props = boardProps({ open: true }, {}, {
+      useKanbanSettings: (select: (value: unknown) => unknown) => select({ value: { ...DEFAULT_SETTINGS, status: 'running' }, mode: 'memory' }),
+      useSessions: (select: (value: unknown) => unknown) => select({ phase: 'ready', ids: ['run'], byId: { run: { id: 'run', displayTitle: 'Running task', blank: false, running: true, updatedAt: 1 } }, subagentsByParent: {} }),
+      setSubagentCatalogOpen: vi.fn(),
+    })
+    render(<KanbanBoard {...props} />)
+    expect(document.querySelectorAll('.dsk-column')).toHaveLength(1)
+    expect(document.querySelector('.dsk-column')?.getAttribute('data-column')).toBe('running')
+    expect(document.querySelector('.dsk-view-options')?.hasAttribute('open')).toBe(false)
   })
 })

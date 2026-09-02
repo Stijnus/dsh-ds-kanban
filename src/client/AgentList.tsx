@@ -44,12 +44,13 @@ export function AgentList({ parentId, props, ancestors, managed = false, visible
       const goal = summary?.projectionValues?.goal?.goal
       const title = entry.label ?? summary?.displayTitle ?? entry.id
       const open = visibleIds !== undefined || expanded.has(entry.id)
-      return <div className="dsk-agent-row" key={entry.id}>
-        <button type="button" aria-label={t('agents.open', { name: title })} onClick={() => {
+      return <div className="dsk-agent-row" data-activity={pending.has(entry.id) ? "waiting" : entry.activity} key={entry.id}>
+        <button className="dsk-agent-name" type="button" aria-label={t('agents.open', { name: title })} onClick={() => {
           props.openSubagent({ parentSessionId: parentId, childSessionId: entry.id, mode: entry.mode })
         }}>{title}</button>
         <strong>{t(pending.has(entry.id) ? 'agents.waiting' : entry.activity === 'running' ? 'agents.running' : 'agents.inactive')}</strong>
-        <span>{t(`agents.mode.${entry.mode}`)}</span>
+        <span className="dsk-agent-mode">{t(`agents.mode.${entry.mode}`)}</span>
+        <details className="dsk-agent-details"><summary>{t('agents.details')}</summary><div>
         <span>{model?.model === undefined ? t('agents.noModel') : t('agents.nextModel', { model: [model.provider, model.model].filter(Boolean).join('/') })}</span>
         {usage !== undefined && <span>{t('card.tokens', { count: String(usage.uncachedInputTokens + usage.cacheReadTokens + usage.cacheWriteTokens + usage.outputTokens) })}</span>}
         {steps !== undefined && <span>{t('card.steps', { count: steps })}</span>}
@@ -57,7 +58,9 @@ export function AgentList({ parentId, props, ancestors, managed = false, visible
         {typeof preset === 'string' && <span>{t('agents.preset', { preset })}</span>}
         {goal !== undefined && <p>{t('agents.goal', { objective: goal.objective })} · {t(`goal.${goal.phase}`)}</p>}
         {goal?.blockedReason !== undefined && <p className="dsk-failure">{goal.blockedReason.message}</p>}
-        {entry.hasChildren && !ancestors.includes(entry.id) && <>
+        </div></details>
+        {entry.hasChildren && !ancestors.includes(entry.id)
+          && (visibleIds === undefined || sessions.subagentsByParent[entry.id]?.entries.some(child => visibleIds.has(child.id))) && <>
           {visibleIds === undefined && <button type="button" aria-expanded={open} onClick={() => { setExpanded(previous => {
             const next = new Set(previous)
             if (next.has(entry.id)) next.delete(entry.id)
@@ -68,8 +71,8 @@ export function AgentList({ parentId, props, ancestors, managed = false, visible
         </>}
       </div>
     })}
-    <button type="button" onClick={() => { void props.refreshSubagents(parentId).catch(cause => {
+    {!managed && <button type="button" onClick={() => { void props.refreshSubagents(parentId).catch(cause => {
       props.actions.setError(cause instanceof Error ? cause.message : String(cause))
-    }) }}>{t('agents.retry')}</button>
+    }) }}>{t('agents.retry')}</button>}
   </div>
 }

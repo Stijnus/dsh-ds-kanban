@@ -89,7 +89,7 @@ The plugin makes no external network request, starts no server, executes no brow
 
 Current Harness APIs expose live Session state, Workspace membership and archive state, pending interaction types, optional goal phases and round usage, model and preset projections, completed steps, token usage, context pressure, cancellation, Session navigation, and direct subagent Session counts.
 
-The current APIs do not expose authoritative cost, task start/runtime history, durable completion timestamps for "completed today," tool-call totals, Git branch/worktree, changed-file count, or short final-result summaries in the task list projection. They also do not expose pin/unpin or unarchive actions. DS Kanban labels aggregate cost and runtime sorting unavailable, omits unavailable card metrics, and never synthesizes them. The completion statistic counts cards in Goal complete across the current filters; it is not a daily count.
+The current APIs do not expose authoritative cost, task start/runtime history, durable completion timestamps for "completed today," tool-call totals, Git branch/worktree, changed-file count, or short final-result summaries in the task list projection. They also do not expose pin/unpin or unarchive actions. DS Kanban disables cost and runtime sorting, omits unavailable summary and card metrics, and never synthesizes them. The completion statistic counts cards in Goal complete across the current filters; it is not a daily count.
 
 <a id="build-from-source"></a>
 ## Build from source
@@ -133,4 +133,6 @@ The bundle targets the `0.1.2-alpha.1` Client service vocabulary and deliberatel
 
 </details>
 
-Diagnostics is an API capability reference, not a live health check. Only the task-count tiles filter by status; token, cost, context, and workspace totals are informational. Failed refreshes, filter writes, and manual moves report errors in the board banner. Manual moves accept only known blank Inbox/Ready cards.
+Diagnostics is an API capability reference, not a live health check. Only the task-count tiles filter by status; token, context, and workspace totals are informational. Failed refreshes, filter writes, and manual moves report errors in the board banner. Manual moves accept only known blank Inbox/Ready cards.
+
+The board keeps search, workspace, and status visible; View options contains the remaining filters and display preferences. Selecting a status focuses its column. Agent hierarchies scroll within the task card, with model and usage details behind a per-agent disclosure. Unsupported cost totals are omitted; Diagnostics still lists unavailable capabilities.

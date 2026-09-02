@@ -31,15 +31,15 @@ export function AgentTree({ parentId, props }: { readonly parentId: SessionId; r
     observed.current.clear()
   }, [setSubagentCatalogOpen])
   return <div className="dsk-agents" onClick={event => { event.stopPropagation() }}>
-    <strong>{t(tree.incomplete ? 'agents.totalPartial' : 'agents.total', { total: tree.total, running: tree.running })}</strong>
+    <div className="dsk-agent-summary"><strong>{t(tree.incomplete ? 'agents.totalPartial' : 'agents.total', { total: tree.total, running: tree.running })}</strong>
+    <button type="button" aria-expanded={open} onClick={() => { setOpen(value => !value) }}>{t(open ? 'agents.hide' : 'agents.show')}</button></div>
     {tree.incomplete && <span role="status">{t(tree.failed ? 'agents.partialError' : 'agents.loading')}</span>}
-    <button type="button" aria-expanded={open} onClick={() => { setOpen(value => !value) }}>{t(open ? 'agents.hide' : 'agents.show')}</button>
     {open && <>
       <div className="dsk-agent-filters">
         {(['all', 'running', 'waiting'] as const).map(value => <button type="button" key={value} aria-pressed={filter === value} onClick={() => { setFilter(value) }}>{t(`agents.filter.${value}`)}</button>)}
       </div>
       {filter !== 'all' && tree.visible.size === 0 && <span>{t('agents.noMatches')}</span>}
-      <AgentList parentId={parentId} props={props} ancestors={[parentId]} managed visibleIds={filter === 'all' ? undefined : tree.visible} />
+      <div className="dsk-agent-scroll" role="region" aria-label={t('agents.hierarchy')} tabIndex={0}><AgentList parentId={parentId} props={props} ancestors={[parentId]} managed visibleIds={filter === 'all' ? undefined : tree.visible} /></div>
       <button type="button" onClick={() => { void Promise.all([...tree.parents].map(id => props.refreshSubagents(id))).catch(cause => {
         props.actions.setError(cause instanceof Error ? cause.message : String(cause))
       }) }}>{t('agents.refreshTree')}</button>

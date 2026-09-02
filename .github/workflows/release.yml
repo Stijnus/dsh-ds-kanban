@@ -1,0 +1,67 @@
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+      - run: pnpm build
+      - run: pnpm test
+      - name: Pack tarball
+        run: pnpm pack --pack-destination .artifacts
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pack-tarball
+          path: .artifacts/dsh-ds-kanban-*.tgz
+          if-no-files-found: error
+
+  github-release:
+    needs: checks
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: pack-tarball
+          path: .artifacts
+      - name: Create GitHub Release with tarball
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="${GITHUB_REF_NAME#v}"
+          gh release create "$GITHUB_REF_NAME" .artifacts/dsh-ds-kanban-*.tgz \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "dsh-ds-kanban v$TAG" \
+            --notes "See the changelog diff between tags for changes in this release."
+
+  npm-publish:
+    needs: checks
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Publish to npm
+        run: pnpm publish --no-git-checks
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

@@ -3,6 +3,7 @@ import type { ConnectionGenerationState } from '@deepseek-ai/dsh-client-connecti
 import type { HostObservable, PropsHooks, PropsLocale, PropsRuntime, PropsStore } from '@deepseek-ai/dsh-client-ui-slots'
 import type { SettingsScope } from '@deepseek-ai/dsh-client-ui-settings/client'
 import type { WorkspaceId } from '@deepseek-ai/dsh-api-workspace-controller/client'
+import type { ISessions } from '@deepseek-ai/dsh-api-session-controller/client'
 import type { SessionId } from '@deepseek-ai/dsh-session/types'
 import type {} from '@deepseek-ai/dsh-client-ui-layout/client'
 import type {} from '@deepseek-ai/dsh-client-ui-sidebar/client'
@@ -23,6 +24,9 @@ export type KanbanHooks = {
 export interface KanbanInjected {
   hooks: KanbanHooks
   openTask: (sessionId: SessionId) => void
+  openSubagent: ISessions['openSubagent']
+  setSubagentCatalogOpen: ISessions['setSubagentCatalogOpen']
+  refreshSubagents: ISessions['refreshSubagents']
   refresh: () => Promise<void>
   archiveTask: (sessionId: SessionId) => Promise<void>
   cancelTask: (sessionId: SessionId) => Promise<void>

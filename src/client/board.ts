@@ -190,7 +190,7 @@ export function projectCards(
         totalTokens,
       }),
       ...(context === undefined ? {} : { contextPercent: context }),
-      subagents: childCount.get(id) ?? 0,
+      subagents: sessions.subagentsByParent[id]?.entries.filter(entry => entry.kind === 'child').length ?? childCount.get(id) ?? 0,
     }]
   })
 }

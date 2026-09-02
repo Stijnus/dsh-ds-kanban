@@ -83,6 +83,12 @@ export function apply(ctx: Context): void {
         sessions.open(sessionId)
         viewActions.close()
       },
+      openSubagent: address => {
+        sessions.openSubagent(address)
+        viewActions.close()
+      },
+      setSubagentCatalogOpen: (id, open) => sessions.setSubagentCatalogOpen(id, open),
+      refreshSubagents: id => sessions.refreshSubagents(id),
       refresh: () => sessions.refresh(),
       archiveTask: async (sessionId) => {
         await workspaces.archiveSession(sessionId)

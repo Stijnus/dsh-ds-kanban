@@ -15,6 +15,7 @@ import type { KanbanBoardProps, PresetOption } from './contracts.ts'
 import { workspaceId } from './contracts.ts'
 import { DENSITIES, DEFAULT_SETTINGS, SORT_ORDERS, TIME_MODES, type Density, type KanbanSettings, type SortOrder, type TimeMode } from '../settings.ts'
 import { exportCsv, exportJson } from './export.ts'
+import { AgentList } from './AgentList.tsx'
 import { useModalFocus } from './focus.ts'
 
 /** Initial per-column DOM budget; operators can reveal further cards in bounded pages. */
@@ -61,6 +62,7 @@ interface CardProps {
 /** Render one session's execution state, durable goal, and navigation actions. */
 export const TaskCard = memo(function TaskCard({ card, settings, props }: CardProps) {
   const { t } = props
+  const [agentsOpen, setAgentsOpen] = useState(false)
   const attention = attentionReason(card, settings.contextWarningPercent)
   const reportFailure = (cause: unknown): void => {
     props.actions.setError(cause instanceof Error ? cause.message : String(cause))
@@ -102,7 +104,7 @@ export const TaskCard = memo(function TaskCard({ card, settings, props }: CardPr
         {card.archived && <span>{t('archived')}</span>}
         {card.queueLength !== undefined && card.queueLength > 0 && <span>{t('card.queued', { count: card.queueLength })}</span>}
         {card.preset !== undefined && <span>{card.preset}</span>}
-        {card.provider !== undefined && card.model !== undefined && <span>{card.provider}/{card.model}</span>}
+        {card.provider !== undefined && card.model !== undefined && <span>{t('agents.nextModel', { model: `${card.provider}/${card.model}` })}</span>}
         {card.steps !== undefined && <span>{t('card.steps', { count: card.steps })}</span>}
         {card.totalTokens !== undefined && <span>{t('card.tokens', { count: compactNumber(card.totalTokens) })}</span>}
         {card.contextPercent !== undefined && (
@@ -136,6 +138,10 @@ export const TaskCard = memo(function TaskCard({ card, settings, props }: CardPr
         event.stopPropagation()
         props.openTask(card.id as SessionId)
       }}>{t(`attention.${attention}`)}</button>}
+      <div className="dsk-agents" onClick={event => { event.stopPropagation() }}>
+        <button type="button" aria-expanded={agentsOpen} onClick={() => { setAgentsOpen(value => !value) }}>{t(agentsOpen ? 'agents.hide' : 'agents.show')}</button>
+        {agentsOpen && <AgentList parentId={card.id as SessionId} props={props} ancestors={[card.id]} />}
+      </div>
       <div className="dsk-card-foot">
         <span>{t('card.lastActivity', {
           time: settings.timeMode === 'absolute'

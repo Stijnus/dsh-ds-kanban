@@ -52,6 +52,7 @@ export const styles = String.raw`
 .dsk-context-bar>span[data-tone=ok]{background:var(--dsw-alias-state-success-primary)}
 .dsk-context-bar>span[data-tone=warn]{background:var(--dsw-alias-state-warn-primary)}
 .dsk-context-bar>span[data-tone=critical]{background:var(--dsw-alias-state-error-primary)}
+.dsk-agents{margin-top:8px;font-size:11px}.dsk-agents button{padding:5px;white-space:normal;text-align:left}.dsk-agent-list{display:flex;flex-direction:column;gap:8px;margin-top:8px}.dsk-agent-row{display:flex;flex-direction:column;gap:5px;border-left:2px solid var(--dsw-alias-border-l2);padding-left:8px;overflow-wrap:anywhere}.dsk-agent-row p{margin:0}.dsk-agent-row>span{color:var(--dsw-alias-label-secondary)}
 .dsk-goal{display:flex;flex-direction:column;gap:5px;margin-top:8px;padding-top:8px;border-top:1px solid var(--dsw-alias-border-l1);font-size:11px;overflow-wrap:anywhere}
 .dsk-goal p{margin:0;line-height:16px}.dsk-goal>span{color:var(--dsw-alias-label-secondary)}
 .dsk-attention{width:100%;margin-top:8px;padding:7px;text-align:left;font-size:11px;white-space:normal}

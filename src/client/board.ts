@@ -252,7 +252,7 @@ export function isAttention(card: BoardCard, contextWarningPercent: number): boo
  * Resolve a drag onto an Inbox/Ready column into manual placement.
  * @param id - the dragged card id read from the data transfer.
  * @param column - the column receiving the drop.
- * @param cards - the cards already projected into that column.
+ * @param cards - all cards in the displayed board or workspace group.
  * @returns the manual column to store, or undefined when the drop must be ignored.
  */
 export function dropColumn(
@@ -263,7 +263,7 @@ export function dropColumn(
   if (column !== 'inbox' && column !== 'ready') return undefined
   if (id === '') return undefined
   const card = cards.find(candidate => candidate.id === id)
-  if (card !== undefined && !card.blank) return undefined
+  if (card === undefined || !card.blank || (card.column !== 'inbox' && card.column !== 'ready')) return undefined
   return column
 }
 

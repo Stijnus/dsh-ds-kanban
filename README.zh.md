@@ -132,3 +132,5 @@ pnpm test
 该 bundle 面向 `0.1.2-alpha.1` Client service vocabulary，并明确不为已删除的 `dsh-client-runtime` 包提供兼容路径。独立版 devDependencies 固定代码已验证的 `@deepseek-ai/dsh-*` 快照（`0.1.2-alpha.3`）；peerDependencies 保持 `>=0.1.2-alpha.1`。goal 包仅用于开发时的类型检查；bundle 不会挂载该服务或新增浏览器外部依赖。目标展示已针对已发布的 `0.1.2-alpha.3` 投影验证。要升级到更新的 alpha，请把 devDependencies 提升到最新发布的 `0.1.2-alpha.x`，重新运行测试套件，并把结果作为新版本发布。
 
 </details>
+
+诊断面板提供 API 能力说明，不执行实时健康检查。只有任务数量卡片可按状态筛选；Token、成本、上下文和工作区汇总仅用于展示。刷新、筛选设置写入和手动移动失败时，看板会显示错误。手动移动只接受已知的空白 Inbox/Ready 任务。

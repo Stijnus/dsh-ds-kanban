@@ -206,3 +206,36 @@ describe('modal focus and submission', () => {
     await waitFor(() => expect(setError).toHaveBeenCalledWith('archive failed'))
   })
 })
+
+
+describe('board controls', () => {
+  it('keeps informational totals out of the button tab order', () => {
+    render(<KanbanBoard {...boardProps({ open: true }, {})} />)
+    for (const name of ['stats.tokens', 'stats.cost', 'stats.context', 'stats.workspaces']) {
+      expect(screen.queryByRole('button', { name: new RegExp(name) })).toBeNull()
+      expect(screen.getByText(name)).toBeDefined()
+    }
+    expect(screen.getByRole('button', { name: /stats.visible/ }).getAttribute('aria-pressed')).toBe('true')
+  })
+
+  it('reports failed refreshes and filter writes', async () => {
+    const setError = vi.fn()
+    const props = boardProps({ open: true }, { setError }, {
+      refresh: vi.fn(async () => { throw new Error('refresh disconnected') }),
+      setSetting: vi.fn(async () => { throw new Error('settings disconnected') }),
+    })
+    render(<KanbanBoard {...props} />)
+    fireEvent.click(screen.getByRole('button', { name: 'refresh' }))
+    await waitFor(() => expect(setError).toHaveBeenCalledWith('refresh disconnected'))
+    fireEvent.click(screen.getByRole('button', { name: /stats.waiting/ }))
+    await waitFor(() => expect(setError).toHaveBeenCalledWith('settings disconnected'))
+  })
+
+  it('keeps reverse Tab inside Diagnostics from its initial focus', () => {
+    const view = render(<KanbanBoard {...boardProps({ open: true }, {})} />)
+    view.rerender(<KanbanBoard {...boardProps({ open: true, diagnosticsOpen: true }, {})} />)
+    expect(document.activeElement).toBe(screen.getByRole('dialog'))
+    fireEvent.keyDown(document.activeElement!, { key: 'Tab', shiftKey: true })
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: 'diagnostics.close' }))
+  })
+})

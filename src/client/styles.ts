@@ -18,7 +18,8 @@ export const styles = String.raw`
 .dsk-error-banner{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:10px 18px 0;border:1px solid var(--dsw-alias-state-error-primary);border-radius:10px;padding:8px 12px;background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-state-error-primary);font-size:12px}
 .dsk-error-banner button{min-height:28px;padding:4px 10px}
 .dsk-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:8px;padding:10px 18px;border-bottom:1px solid var(--dsw-alias-border-l1)}
-.dsk-stats button{display:flex;min-width:92px;flex-direction:column;align-items:flex-start;padding:8px 10px;text-align:left}
+.dsk-stat{border:1px solid var(--dsw-alias-border-l2);border-radius:8px;background:var(--dsw-alias-bg-layer-2);display:flex;min-width:92px;flex-direction:column;align-items:flex-start;padding:8px 10px;text-align:left}
+.dsk-stats button[aria-pressed=true]{border-color:var(--dsw-alias-brand-primary)}
 .dsk-stats strong{font-size:17px}.dsk-stats span{margin-top:2px;color:var(--dsw-alias-label-secondary);font-size:11px}
 .dsk-filters{display:flex;align-items:flex-end;gap:8px;padding:10px 18px;border-bottom:1px solid var(--dsw-alias-border-l1);overflow-x:auto;background:var(--dsw-alias-bg-layer-1)}
 .dsk-filters label{display:flex;min-width:130px;flex-direction:column;gap:4px;color:var(--dsw-alias-label-secondary);font-size:11px}

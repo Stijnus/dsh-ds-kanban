@@ -178,10 +178,10 @@ describe('drop placement', () => {
   const card = (id: string, column: BoardColumn, blank = true): BoardCard => ({
     id, title: id, column, archived: false, running: false, waiting: false, updatedAt: 1, blank, subagents: 0,
   })
-  it('lands blank or unknown cards on Inbox/Ready and ignores every other drop', () => {
+  it('lands known blank Inbox/Ready cards and ignores every other drop', () => {
     const cards = [card('blank', 'inbox'), card('worked', 'done', false), card('run', 'running', false)]
     expect(dropColumn('blank', 'ready', cards)).toBe('ready')
-    expect(dropColumn('new', 'inbox', cards)).toBe('inbox')
+    expect(dropColumn('new', 'inbox', cards)).toBeUndefined()
     expect(dropColumn('worked', 'inbox', cards)).toBeUndefined()
     expect(dropColumn('run', 'ready', cards)).toBeUndefined()
     expect(dropColumn('', 'ready', cards)).toBeUndefined()

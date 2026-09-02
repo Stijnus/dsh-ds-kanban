@@ -165,12 +165,13 @@ export const TaskCard = memo(function TaskCard({ card, settings, props }: CardPr
 
 interface ColumnProps {
   readonly column: BoardColumn
+  readonly allCards: readonly BoardCard[]
   readonly cards: readonly BoardCard[]
   readonly settings: KanbanSettings
   readonly props: KanbanBoardProps
 }
 
-function BoardColumnView({ column, cards, settings, props }: ColumnProps) {
+function BoardColumnView({ column, cards, allCards, settings, props }: ColumnProps) {
   const [limit, setLimit] = useState(COLUMN_CARD_PAGE_SIZE)
   const visibleCards = visibleColumnCards(cards, limit)
   return (
@@ -185,9 +186,11 @@ function BoardColumnView({ column, cards, settings, props }: ColumnProps) {
         if (column !== 'inbox' && column !== 'ready') return
         event.preventDefault()
         const id = event.dataTransfer.getData('text/ds-kanban-session')
-        const target = dropColumn(id, column, cards)
+        const target = dropColumn(id, column, allCards)
         if (target === undefined) return
-        void props.setManual(id as SessionId, target)
+        void props.setManual(id as SessionId, target).catch(cause => {
+          props.actions.setError(cause instanceof Error ? cause.message : String(cause))
+        })
       }}
     >
       <header><h2>{props.t(`column.${column}`)}</h2><span>{cards.length}</span></header>
@@ -210,6 +213,7 @@ function Columns({ cards, settings, props }: {
     <BoardColumnView
       key={column}
       column={column}
+      allCards={cards}
       cards={cards.filter(card => card.column === column)}
       settings={settings}
       props={props}
@@ -352,8 +356,11 @@ export function KanbanBoard(props: KanbanBoardProps) {
 
   if (!open) return null
 
+  const reportFailure = (cause: unknown): void => {
+    props.actions.setError(cause instanceof Error ? cause.message : String(cause))
+  }
   const set = <K extends keyof KanbanSettings>(field: K, value: KanbanSettings[K]): void => {
-    void props.setSetting(field, value)
+    void props.setSetting(field, value).catch(reportFailure)
   }
   const onKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>): void => {
     if (event.key === '/' && !(event.target instanceof HTMLInputElement) && !(event.target instanceof HTMLTextAreaElement)) {
@@ -361,11 +368,11 @@ export function KanbanBoard(props: KanbanBoardProps) {
       searchRef.current?.focus()
     }
   }
-  const statButton = (label: string, value: string | number, status?: string) => (
-    <button type="button" disabled={status === undefined} onClick={() => { if (status !== undefined) set('status', status) }}>
+  const statButton = (label: string, value: string | number, status?: string) => status === undefined
+    ? <div className="dsk-stat"><strong>{value}</strong><span>{label}</span></div>
+    : <button className="dsk-stat" type="button" aria-pressed={settings.status === status} onClick={() => { set('status', status) }}>
       <strong>{value}</strong><span>{label}</span>
     </button>
-  )
   const renderBoard = (scopeCards: readonly BoardCard[]) => <Columns cards={scopeCards} settings={settings} props={props} />
   // The shell's overlay layer sits below the floating panel toggles and the
   // details/bottom panels, so a full-shell board rendered there collects the
@@ -390,7 +397,7 @@ export function KanbanBoard(props: KanbanBoardProps) {
             <IconPlusOutline16 size={14} /><span>{props.t('newTask')}</span>
           </button>
           <button type="button" onClick={() => { props.actions.setDiagnosticsOpen(true) }}>{props.t('diagnostics')}</button>
-          <button type="button" onClick={() => { void props.refresh() }}>
+          <button type="button" onClick={() => { void props.refresh().catch(reportFailure) }}>
             <IconRefreshOutline16 size={14} /><span>{props.t('refresh')}</span>
           </button>
           <button type="button" onClick={() => { saveFile('ds-kanban.json', 'application/json', exportJson(cards)) }}>{props.t('exportJson')}</button>
@@ -409,10 +416,10 @@ export function KanbanBoard(props: KanbanBoardProps) {
         {statButton(props.t('stats.waiting'), stats.waiting, 'waiting')}
         {statButton(props.t('stats.blocked'), stats.blocked, 'blocked')}
         {statButton(props.t('stats.completed'), stats.completed, 'done')}
-        {statButton(props.t('stats.tokens'), compactNumber(stats.tokens), '')}
+        {statButton(props.t('stats.tokens'), compactNumber(stats.tokens))}
         {statButton(props.t('stats.cost'), props.t('unavailable'))}
-        {statButton(props.t('stats.context'), stats.averageContext === undefined ? props.t('unavailable') : `${Math.round(stats.averageContext)}%`, '')}
-        {statButton(props.t('stats.workspaces'), stats.workspaces, '')}
+        {statButton(props.t('stats.context'), stats.averageContext === undefined ? props.t('unavailable') : `${Math.round(stats.averageContext)}%`)}
+        {statButton(props.t('stats.workspaces'), stats.workspaces)}
       </section>
       <section className="dsk-filters">
         <label className="dsk-search"><span>{props.t('filters.search')}</span><input ref={searchRef} type="search" value={search} placeholder={props.t('filters.searchPlaceholder')} onChange={event => { setSearch(event.target.value) }} /></label>

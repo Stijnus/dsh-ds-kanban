@@ -132,3 +132,5 @@ The board projects top-level tasks and counts direct subagent Sessions; it does 
 The bundle targets the `0.1.2-alpha.1` Client service vocabulary and deliberately has no compatibility path for the removed `dsh-client-runtime` package. Standalone devDependencies pin the `@deepseek-ai/dsh-*` snapshot the code is proven against (`0.1.2-alpha.3`); peerDependencies stay `>=0.1.2-alpha.1`. The goal package is a type-only development dependency; the bundle does not mount it or require a new browser external. Goal presentation is validated against the published `0.1.2-alpha.3` projection. To pick up a newer alpha, bump the devDependencies to the newest published `0.1.2-alpha.x`, re-run the suite, and release the result as a new version.
 
 </details>
+
+Diagnostics is an API capability reference, not a live health check. Only the task-count tiles filter by status; token, cost, context, and workspace totals are informational. Failed refreshes, filter writes, and manual moves report errors in the board banner. Manual moves accept only known blank Inbox/Ready cards.

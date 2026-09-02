@@ -57,12 +57,20 @@ Removing the package stops loading the board. The `ds-kanban` settings section r
 
 ### What you get
 
-The sidebar badge counts waiting, failed, and high-context-pressure tasks. The full board provides Inbox, Ready, Running, Waiting, Blocked or Failed, and Done columns; live statistics; search and filters; Workspace grouping; density and timestamp controls; explicit JSON/CSV export; diagnostics; task creation; existing-task navigation; cancellation; archive; and task-ID copy. Automatic state always overrides manual Inbox/Ready placement.
+The sidebar badge counts waiting, failed, goal-blocked, and high-context-pressure tasks. The full board provides Inbox, Ready, Running, Waiting, Blocked or Failed, Idle, and Goal complete columns; live statistics; search and filters; Workspace grouping; density and timestamp controls; explicit JSON/CSV export; diagnostics; task creation; existing-task navigation; cancellation; archive; and task-ID copy. Automatic state always overrides manual Inbox/Ready placement.
 
 <a id="operate-the-board"></a>
 ## Operate the board
 
 Click a card or focus it and press Enter to open its existing Harness task. Left and Right Arrow move focus between populated columns, `/` focuses search, and Escape closes the active board layer or dialog. The board covers the whole shell, including the sidebar, so its return paths never depend on the covered UI: opening the board moves focus onto the toolbar's **Back to session** control, and that control or a document-level Escape closes the board and restores focus to the sidebar action. Only blank Inbox/Ready cards are draggable; runtime, waiting, failed, completed, and archived facts cannot be overwritten by drag-and-drop. Archive and cancellation require confirmation. Failed archive, cancellation, or ID-copy actions surface an inline error banner with a dismiss control. Export contains the explicit card summary allowlist and never includes prompts, transcripts, credentials, tool results, or file contents.
+
+### Read execution and goal state
+
+A stopped, nonblank session is **Idle** unless Harness supplies a completed goal. **Goal complete** means the current durable goal is complete; it does not mean a reviewer accepted the work. Pending interactions, current execution, and failures take precedence over goal completion; queued work keeps a stopped session in Idle. The sidebar's unread-completion reminder is not used as evidence of task success.
+
+When Harness supplies the `goal` projection, cards show its objective, phase, rounds used against the cap, and recorded blocker explanation. Rounds measure continuation usage, not percentage complete. An active goal can be idle; the projection does not expose whether automatic continuation is armed. Open the session to use its existing goal controls. Missing or cleared goal projections remove the goal detail without affecting ordinary board operation.
+
+Choose **Needs attention** in the Status filter to find pending approvals, questions, execution failures, blocked goals, and high context usage. Each attention card names the reason and opens the existing session's controls. Unknown interaction domains use a generic input-required action. These buttons navigate only: approval and answer submission remain with the current Harness interaction. Exports omit goal objectives and blocker explanations.
 
 <a id="understand-the-implementation"></a>
 ## Understand the implementation
@@ -74,14 +82,14 @@ The Host adds no HTTP route. Browser mutations reuse authenticated Session, Work
 <a id="security-and-privacy"></a>
 ## Security and privacy
 
-The plugin makes no external network request, starts no server, executes no browser-supplied shell command, and emits no telemetry. It reads list summaries and lightweight lifecycle/projection state rather than task content. Malformed or unknown-version settings are rejected without rewriting the stored section; the Client retains its last accepted snapshot. Lifecycle disposal removes Session subscriptions, slot rows, locale dictionaries, and the injected style element. See [`SECURITY.md`](SECURITY.md) for the threat and data summary.
+The plugin makes no external network request, starts no server, executes no browser-supplied shell command, and emits no telemetry. It reads list summaries and lightweight lifecycle/projection state including available goal objectives and blocker explanations; it does not request transcript content. Malformed or unknown-version settings are rejected without rewriting the stored section; the Client retains its last accepted snapshot. Lifecycle disposal removes Session subscriptions, slot rows, locale dictionaries, and the injected style element. See [`SECURITY.md`](SECURITY.md) for the threat and data summary.
 
 <a id="supported-and-unavailable-capabilities"></a>
 ## Supported and unavailable capabilities
 
-Current Harness APIs expose live Session state, Workspace membership and archive state, pending user interactions, model and preset projections, completed steps, token usage, context pressure, cancellation, Session navigation, and direct subagent Session counts.
+Current Harness APIs expose live Session state, Workspace membership and archive state, pending interaction types, optional goal phases and round usage, model and preset projections, completed steps, token usage, context pressure, cancellation, Session navigation, and direct subagent Session counts.
 
-The current APIs do not expose authoritative cost, task start/runtime history, durable completion timestamps for "completed today," tool-call totals, Git branch/worktree, changed-file count, or short final-result summaries in the task list projection. They also do not expose pin/unpin or unarchive actions. DS Kanban labels aggregate cost, runtime sorting, and completed-today statistics unavailable, omits unavailable card metrics, and never synthesizes them.
+The current APIs do not expose authoritative cost, task start/runtime history, durable completion timestamps for "completed today," tool-call totals, Git branch/worktree, changed-file count, or short final-result summaries in the task list projection. They also do not expose pin/unpin or unarchive actions. DS Kanban labels aggregate cost and runtime sorting unavailable, omits unavailable card metrics, and never synthesizes them. The completion statistic counts cards in Goal complete across the current filters; it is not a daily count.
 
 <a id="build-from-source"></a>
 ## Build from source
@@ -92,6 +100,8 @@ pnpm typecheck
 pnpm build
 pnpm test
 ```
+
+Run `pnpm exec vitest bench --run tests/runtime.bench.ts` to measure runtime publication with 1,000 sessions and 20 active agents. This benchmark excludes React rendering and network delivery. Behavior tests also assert per-session snapshot reads and stable identities, without timing thresholds.
 
 The test command reads the built Client artifact, so build it before testing after a clean checkout. The browser compatibility check rejects the removed `@deepseek-ai/dsh-client-runtime` import and any unexpected external `require()` call. Development happens on the `main` branch; releases are tagged `vX.Y.Z` and shipped by the `ci.yml` and `release.yml` workflows.
 
@@ -119,6 +129,6 @@ The board projects top-level tasks and counts direct subagent Sessions; it does 
 <details>
 <summary>Working context for maintainers — click to expand</summary>
 
-The bundle targets the `0.1.2-alpha.1` Client service vocabulary and deliberately has no compatibility path for the removed `dsh-client-runtime` package. Standalone devDependencies pin the `@deepseek-ai/dsh-*` snapshot the code is proven against (`0.1.2-alpha.3`); peerDependencies stay `>=0.1.2-alpha.1`. To pick up a newer alpha, bump the devDependencies to the newest published `0.1.2-alpha.x`, re-run the suite, and release the result as a new version.
+The bundle targets the `0.1.2-alpha.1` Client service vocabulary and deliberately has no compatibility path for the removed `dsh-client-runtime` package. Standalone devDependencies pin the `@deepseek-ai/dsh-*` snapshot the code is proven against (`0.1.2-alpha.3`); peerDependencies stay `>=0.1.2-alpha.1`. The goal package is a type-only development dependency; the bundle does not mount it or require a new browser external. Goal presentation is validated against the published `0.1.2-alpha.3` projection. To pick up a newer alpha, bump the devDependencies to the newest published `0.1.2-alpha.x`, re-run the suite, and release the result as a new version.
 
 </details>

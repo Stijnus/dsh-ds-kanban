@@ -1,6 +1,6 @@
 /** Full-size live operations board rendered inside the existing Harness shell. */
 import {
-  useCallback, useEffect, useMemo, useRef, useState,
+  memo, useCallback, useEffect, useMemo, useRef, useState,
   type DragEvent, type KeyboardEvent as ReactKeyboardEvent,
 } from 'react'
 import { createPortal } from 'react-dom'
@@ -10,7 +10,7 @@ import {
 } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { SessionId } from '@deepseek-ai/dsh-session/types'
 import type { WorkspaceSnapshot } from '@deepseek-ai/dsh-api-workspace-controller/client'
-import { BOARD_COLUMNS, aggregateStats, contextTone, dropColumn, filterCards, filtersFromSettings, groupCards, projectCards, type BoardCard, type BoardColumn } from './board.ts'
+import { BOARD_COLUMNS, aggregateStats, attentionReason, contextTone, createCardProjector, dropColumn, filterCards, filtersFromSettings, groupCards, type BoardCard, type BoardColumn } from './board.ts'
 import type { KanbanBoardProps, PresetOption } from './contracts.ts'
 import { workspaceId } from './contracts.ts'
 import { DENSITIES, DEFAULT_SETTINGS, SORT_ORDERS, TIME_MODES, type Density, type KanbanSettings, type SortOrder, type TimeMode } from '../settings.ts'
@@ -58,19 +58,26 @@ interface CardProps {
   readonly props: KanbanBoardProps
 }
 
-export function TaskCard({ card, settings, props }: CardProps) {
+/** Render one session's execution state, durable goal, and navigation actions. */
+export const TaskCard = memo(function TaskCard({ card, settings, props }: CardProps) {
   const { t } = props
+  const attention = attentionReason(card, settings.contextWarningPercent)
   const reportFailure = (cause: unknown): void => {
     props.actions.setError(cause instanceof Error ? cause.message : String(cause))
   }
   const onKeyDown = (event: ReactKeyboardEvent<HTMLElement>): void => {
+    if (event.target !== event.currentTarget) return
     if (event.key === 'Enter') props.openTask(card.id as SessionId)
     if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return
     event.preventDefault()
     const index = BOARD_COLUMNS.indexOf(card.column)
-    const next = BOARD_COLUMNS[index + (event.key === 'ArrowRight' ? 1 : -1)]
-    if (next === undefined) return
-    document.querySelector<HTMLElement>(`[data-card-column="${next}"]`)?.focus()
+    const direction = event.key === 'ArrowRight' ? 1 : -1
+    for (let target = index + direction; target >= 0 && target < BOARD_COLUMNS.length; target += direction) {
+      const next = document.querySelector<HTMLElement>(`[data-card-column="${BOARD_COLUMNS[target]}"]`)
+      if (next === null) continue
+      next.focus()
+      break
+    }
   }
   const moveable = card.blank && (card.column === 'inbox' || card.column === 'ready')
   return (
@@ -93,8 +100,7 @@ export function TaskCard({ card, settings, props }: CardProps) {
       </div>
       <div className="dsk-card-badges">
         {card.archived && <span>{t('archived')}</span>}
-        {card.waiting && <span>{t('waitingIndicator')}</span>}
-        {card.failure !== undefined && <span>{t('failedIndicator')}</span>}
+        {card.queueLength !== undefined && card.queueLength > 0 && <span>{t('card.queued', { count: card.queueLength })}</span>}
         {card.preset !== undefined && <span>{card.preset}</span>}
         {card.provider !== undefined && card.model !== undefined && <span>{card.provider}/{card.model}</span>}
         {card.steps !== undefined && <span>{t('card.steps', { count: card.steps })}</span>}
@@ -106,6 +112,13 @@ export function TaskCard({ card, settings, props }: CardProps) {
         )}
         {card.subagents > 0 && <span>{t('card.subagents', { count: card.subagents })}</span>}
       </div>
+      {card.goal !== undefined && <div className="dsk-goal">
+        <strong>{t(`goal.${card.goal.goal.phase}`)}</strong>
+        <p>{card.goal.goal.objective}</p>
+        <span>{t('goal.rounds', { used: card.goal.roundsStarted, limit: card.goal.goal.maxGoalRounds })}</span>
+        {card.goal.goal.phase === 'active' && !card.running && <span>{t('goal.activeHint')}</span>}
+        {card.goal.goal.blockedReason !== undefined && <p className="dsk-failure">{card.goal.goal.blockedReason.message}</p>}
+      </div>}
       {card.contextPercent !== undefined && (
         <div
           className="dsk-context-bar"
@@ -119,6 +132,10 @@ export function TaskCard({ card, settings, props }: CardProps) {
         </div>
       )}
       {card.failure !== undefined && <p className="dsk-failure">{card.failure}</p>}
+      {attention !== undefined && <button className="dsk-attention" type="button" onClick={event => {
+        event.stopPropagation()
+        props.openTask(card.id as SessionId)
+      }}>{t(`attention.${attention}`)}</button>}
       <div className="dsk-card-foot">
         <span>{t('card.lastActivity', {
           time: settings.timeMode === 'absolute'
@@ -144,7 +161,7 @@ export function TaskCard({ card, settings, props }: CardProps) {
       </div>
     </article>
   )
-}
+})
 
 interface ColumnProps {
   readonly column: BoardColumn
@@ -289,9 +306,10 @@ export function KanbanBoard(props: KanbanBoardProps) {
   const connection = props.useConnectionGeneration(snapshot => snapshot)
   const [search, setSearch] = useState('')
   const searchRef = useRef<HTMLInputElement>(null)
+  const projectCards = useMemo(createCardProjector, [])
   const allCards = useMemo(
     () => projectCards(sessions, workspaces, pending, runtime, settings.manual),
-    [sessions, workspaces, pending, runtime, settings.manual],
+    [projectCards, sessions, workspaces, pending, runtime, settings.manual],
   )
   const cards = useMemo(
     () => filterCards(allCards, filtersFromSettings(settings, search)),
@@ -390,7 +408,7 @@ export function KanbanBoard(props: KanbanBoardProps) {
         {statButton(props.t('stats.running'), stats.running, 'running')}
         {statButton(props.t('stats.waiting'), stats.waiting, 'waiting')}
         {statButton(props.t('stats.blocked'), stats.blocked, 'blocked')}
-        {statButton(props.t('stats.completedToday'), props.t('unavailable'))}
+        {statButton(props.t('stats.completed'), stats.completed, 'done')}
         {statButton(props.t('stats.tokens'), compactNumber(stats.tokens), '')}
         {statButton(props.t('stats.cost'), props.t('unavailable'))}
         {statButton(props.t('stats.context'), stats.averageContext === undefined ? props.t('unavailable') : `${Math.round(stats.averageContext)}%`, '')}

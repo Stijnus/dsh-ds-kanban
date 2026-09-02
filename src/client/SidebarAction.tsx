@@ -1,7 +1,7 @@
 /** Sidebar footer action opening the shared DS Kanban overlay. */
 import { useMemo } from 'react'
 import { IconChecklistOutline14, Tooltip } from '@deepseek-ai/dsh-client-ui-primitives'
-import { isAttention, projectCards } from './board.ts'
+import { createCardProjector, isAttention } from './board.ts'
 import type { SidebarActionProps } from './contracts.ts'
 import { DEFAULT_SETTINGS } from '../settings.ts'
 
@@ -13,9 +13,10 @@ export function SidebarAction(props: SidebarActionProps) {
   const workspaces = useWorkspaces(snapshot => snapshot)
   const pending = useSessionPendingInteraction(snapshot => snapshot)
   const open = props.useStore(snapshot => snapshot.open)
+  const projectCards = useMemo(createCardProjector, [])
   const cards = useMemo(
     () => projectCards(sessions, workspaces, pending, runtime, settings.manual),
-    [sessions, workspaces, pending, runtime, settings.manual],
+    [projectCards, sessions, workspaces, pending, runtime, settings.manual],
   )
   const attention = cards.filter(card => isAttention(card, settings.contextWarningPercent)).length
   return (

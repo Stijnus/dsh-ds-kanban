@@ -1,0 +1,87 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`agent supervision presentation > records goal lifecycle copy in Chinese 1`] = `
+[
+  {
+    "action": null,
+    "column": "idle",
+    "goal": [
+      "目标进行中",
+      "Preserve existing sign-in behavior",
+      "已使用 12 / 40 轮",
+      "自动继续可能需要在会话中恢复。",
+    ],
+  },
+  {
+    "action": null,
+    "column": "idle",
+    "goal": [
+      "目标已暂停",
+      "Preserve existing sign-in behavior",
+      "已使用 12 / 40 轮",
+    ],
+  },
+  {
+    "action": "任务受阻 · 在会话中查看",
+    "column": "blocked",
+    "goal": [
+      "目标受阻",
+      "Preserve existing sign-in behavior",
+      "已使用 12 / 40 轮",
+      "Choose the authentication provider",
+    ],
+  },
+  {
+    "action": null,
+    "column": "done",
+    "goal": [
+      "目标已完成",
+      "Preserve existing sign-in behavior",
+      "已使用 12 / 40 轮",
+    ],
+  },
+]
+`;
+
+exports[`agent supervision presentation > records goal lifecycle copy in English 1`] = `
+[
+  {
+    "action": null,
+    "column": "idle",
+    "goal": [
+      "Goal active",
+      "Preserve existing sign-in behavior",
+      "12 of 40 rounds used",
+      "Automatic continuation may require resuming in the session.",
+    ],
+  },
+  {
+    "action": null,
+    "column": "idle",
+    "goal": [
+      "Goal paused",
+      "Preserve existing sign-in behavior",
+      "12 of 40 rounds used",
+    ],
+  },
+  {
+    "action": "Work blocked · Review in session",
+    "column": "blocked",
+    "goal": [
+      "Goal blocked",
+      "Preserve existing sign-in behavior",
+      "12 of 40 rounds used",
+      "Choose the authentication provider",
+    ],
+  },
+  {
+    "action": null,
+    "column": "done",
+    "goal": [
+      "Goal complete",
+      "Preserve existing sign-in behavior",
+      "12 of 40 rounds used",
+    ],
+  },
+]
+`;

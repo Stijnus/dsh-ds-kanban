@@ -26,7 +26,7 @@ export const styles = String.raw`
 .dsk-filters .dsk-search{min-width:240px;flex:1}.dsk-filters .dsk-check{min-width:max-content;flex-direction:row;align-items:center;padding-bottom:8px;color:var(--dsw-alias-label-primary)}
 .dsk-filters .dsk-check input{min-height:auto}
 .dsk-board-scroll{min-height:0;overflow:auto;padding:14px 18px 24px}
-.dsk-columns{display:grid;grid-template-columns:repeat(6,minmax(230px,1fr));gap:10px;min-width:1420px;align-items:start}
+.dsk-columns{display:grid;grid-template-columns:repeat(7,minmax(230px,1fr));gap:10px;min-width:1660px;align-items:start}
 .dsk-column{min-height:160px;border:1px solid var(--dsw-alias-border-l1);border-radius:12px;background:var(--dsw-alias-bg-layer-1)}
 .dsk-column>header{display:flex;align-items:center;justify-content:space-between;padding:10px 11px;border-bottom:1px solid var(--dsw-alias-border-l1)}
 .dsk-column h2{margin:0;font-size:13px}.dsk-column>header>span{min-width:22px;border-radius:10px;padding:2px 6px;background:var(--dsw-alias-bg-layer-3);color:var(--dsw-alias-label-secondary);font-size:11px;text-align:center}
@@ -38,11 +38,12 @@ export const styles = String.raw`
 .dsk-card[data-card-column=running]{--dsh-card-status:var(--dsw-alias-brand-text)}
 .dsk-card[data-card-column=waiting]{--dsh-card-status:var(--dsw-alias-state-warn-primary)}
 .dsk-card[data-card-column=blocked]{--dsh-card-status:var(--dsw-alias-state-error-primary)}
+.dsk-card[data-card-column=idle]{--dsh-card-status:var(--dsw-alias-label-secondary)}
 .dsk-card[data-card-column=done]{--dsh-card-status:var(--dsw-alias-state-success-primary)}
 .dsk-card:hover{border-color:var(--dsw-alias-border-l3);border-left-color:var(--dsh-card-status);background:var(--dsw-alias-interactive-bg-hover)}
 .dsk-card[draggable=true]{cursor:grab}.dsk-card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:7px}.dsk-card-head strong{min-width:0;overflow-wrap:anywhere;font-size:13px;line-height:18px}
 .dsk-status{flex:none;border-radius:8px;padding:2px 5px;background:var(--dsw-alias-bg-layer-3);color:var(--dsw-alias-label-secondary);font-size:10px}
-.dsk-status-inbox{color:var(--dsw-alias-label-secondary)}.dsk-status-ready{color:var(--dsw-alias-state-business-primary)}.dsk-status-running{color:var(--dsw-alias-brand-text)}.dsk-status-waiting{color:var(--dsw-alias-state-warn-label)}.dsk-status-blocked{color:var(--dsw-alias-state-error-primary)}.dsk-status-done{color:var(--dsw-alias-state-success-primary)}
+.dsk-status-inbox{color:var(--dsw-alias-label-secondary)}.dsk-status-ready{color:var(--dsw-alias-state-business-primary)}.dsk-status-running{color:var(--dsw-alias-brand-text)}.dsk-status-waiting{color:var(--dsw-alias-state-warn-label)}.dsk-status-blocked{color:var(--dsw-alias-state-error-primary)}.dsk-status-idle{color:var(--dsw-alias-label-secondary)}.dsk-status-done{color:var(--dsw-alias-state-success-primary)}
 .dsk-card-sub{margin-top:5px;overflow:hidden;color:var(--dsw-alias-label-tertiary);font-size:11px;text-overflow:ellipsis;white-space:nowrap}
 .dsk-card-badges{display:flex;flex-wrap:wrap;gap:4px;margin-top:8px}.dsk-card-badges span{border-radius:7px;padding:2px 5px;background:var(--dsw-alias-bg-layer-3);color:var(--dsw-alias-label-secondary);font-size:10px}.dsk-card-badges span[data-warning=true]{background:var(--dsw-alias-state-warn-tertiary);color:var(--dsw-alias-state-warn-label)}
 .dsk-context-bar{height:4px;margin-top:8px;border-radius:2px;background:var(--dsw-alias-bg-layer-3);overflow:hidden}
@@ -50,6 +51,9 @@ export const styles = String.raw`
 .dsk-context-bar>span[data-tone=ok]{background:var(--dsw-alias-state-success-primary)}
 .dsk-context-bar>span[data-tone=warn]{background:var(--dsw-alias-state-warn-primary)}
 .dsk-context-bar>span[data-tone=critical]{background:var(--dsw-alias-state-error-primary)}
+.dsk-goal{display:flex;flex-direction:column;gap:5px;margin-top:8px;padding-top:8px;border-top:1px solid var(--dsw-alias-border-l1);font-size:11px;overflow-wrap:anywhere}
+.dsk-goal p{margin:0;line-height:16px}.dsk-goal>span{color:var(--dsw-alias-label-secondary)}
+.dsk-attention{width:100%;margin-top:8px;padding:7px;text-align:left;font-size:11px;white-space:normal}
 .dsk-failure{margin:7px 0 0;color:var(--dsw-alias-state-error-primary);font-size:11px;line-height:16px}
 .dsk-card-foot{display:flex;align-items:center;justify-content:space-between;gap:5px;margin-top:8px;color:var(--dsw-alias-label-tertiary);font-size:10px}.dsk-card-actions{display:flex;gap:3px}.dsk-card-actions button{display:inline-flex;width:24px;height:24px;align-items:center;justify-content:center;padding:0;border-radius:6px}
 .dsk-root[data-density=compact] .dsk-card-list{gap:5px;padding:5px}.dsk-root[data-density=compact] .dsk-card{padding:7px}.dsk-root[data-density=compact] .dsk-card-badges{margin-top:5px}
@@ -66,7 +70,7 @@ export const styles = String.raw`
 .dsk-sidebar-label{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .dsk-sidebar-badge{margin-left:auto;min-width:18px;border-radius:9px;padding:1px 5px;background:var(--dsw-alias-state-warn-primary);color:var(--dsw-alias-label-primary-inverted);font-size:10px;line-height:14px;text-align:center}
 .dsk-sidebar-action[data-rail] .dsk-sidebar-badge{position:absolute;top:-4px;right:-4px;margin:0}
-@media(max-width:900px){.dsk-root{grid-template-rows:auto auto auto auto minmax(0,1fr)}.dsk-topbar{align-items:stretch;flex-direction:column}.dsk-topbar nav{justify-content:flex-start}.dsk-filters{align-items:stretch;flex-wrap:wrap;overflow:visible}.dsk-filters label,.dsk-filters .dsk-search{min-width:calc(50% - 4px);flex:1}.dsk-board-scroll{padding:10px}.dsk-columns{grid-template-columns:repeat(6,minmax(210px,78vw));min-width:max-content}}
+@media(max-width:900px){.dsk-root{grid-template-rows:auto auto auto auto minmax(0,1fr)}.dsk-topbar{align-items:stretch;flex-direction:column}.dsk-topbar nav{justify-content:flex-start}.dsk-filters{align-items:stretch;flex-wrap:wrap;overflow:visible}.dsk-filters label,.dsk-filters .dsk-search{min-width:calc(50% - 4px);flex:1}.dsk-board-scroll{padding:10px}.dsk-columns{grid-template-columns:repeat(7,minmax(210px,78vw));min-width:max-content}}
 @media(max-width:560px){.dsk-filters label,.dsk-filters .dsk-search{min-width:100%}.dsk-topbar,.dsk-stats,.dsk-filters{padding-left:10px;padding-right:10px}.dsk-topbar nav button{flex:1}.dsk-modal-backdrop{padding:10px}}
 @media(prefers-reduced-motion:reduce){.dsk-root *{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
 `

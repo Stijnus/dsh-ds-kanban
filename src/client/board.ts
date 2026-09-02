@@ -5,9 +5,10 @@ import type { SessionPendingInteractionSnapshot } from '@deepseek-ai/dsh-client-
 import type {} from '@deepseek-ai/dsh-agent-presets/types'
 import type {} from '@deepseek-ai/dsh-session-stats/client'
 import type {} from '@deepseek-ai/dsh-token-meter/client'
+import type { GoalProjection } from '@deepseek-ai/dsh-goal/client'
 import type { KanbanSettings, ManualColumn, SortOrder } from '../settings.ts'
 
-export const BOARD_COLUMNS = ['inbox', 'ready', 'running', 'waiting', 'blocked', 'done'] as const
+export const BOARD_COLUMNS = ['inbox', 'ready', 'running', 'waiting', 'blocked', 'idle', 'done'] as const
 export type BoardColumn = typeof BOARD_COLUMNS[number]
 
 /** Live per-session facts not carried by the list summary. */
@@ -31,7 +32,12 @@ export interface BoardCard {
   readonly archived: boolean
   readonly running: boolean
   readonly waiting: boolean
+  /** Owning interaction domain; unknown domains retain a generic attention label. */
+  readonly interactionKind?: string
   readonly failure?: string
+  /** Durable objective state; does not indicate live continuation eligibility. */
+  readonly goal?: GoalProjection
+  readonly queueLength?: number
   readonly updatedAt: number
   readonly blank: boolean
   readonly preset?: string
@@ -108,7 +114,11 @@ function cardColumn(
   if (waiting) return 'waiting'
   if (summary.running || runtime?.running === true) return 'running'
   if (runtime?.lastAgentError) return 'blocked'
-  if (!summary.blank) return 'done'
+  const goal = summary.projectionValues?.goal?.goal
+  if (goal?.phase === 'blocked') return 'blocked'
+  if ((runtime?.queueLength ?? 0) > 0) return 'idle'
+  if (goal?.phase === 'complete') return 'done'
+  if (goal !== undefined || !summary.blank) return 'idle'
   return manual ?? 'inbox'
 }
 
@@ -144,12 +154,14 @@ export function projectCards(
     const usage = summary.projectionValues?.tokenUsage
     const selection = summary.projectionValues?.modelSelection?.next
     const stats = summary.projectionValues?.sessionStats
+    const goal = summary.projectionValues?.goal
     const inputTokens = usage === undefined
       ? undefined
       : usage.uncachedInputTokens + usage.cacheReadTokens + usage.cacheWriteTokens
     const totalTokens = inputTokens === undefined ? undefined : inputTokens + usage!.outputTokens
     const context = contextPercent(summary)
     const isWaiting = pending.has(id)
+    const interaction = pending.get(id)
     return [{
       id,
       title: summary.displayTitle,
@@ -159,7 +171,10 @@ export function projectCards(
       archived: archived.has(id),
       running: summary.running || run?.running === true,
       waiting: isWaiting,
+      ...(interaction === undefined ? {} : { interactionKind: interaction.kind }),
       ...(run?.lastAgentError ? { failure: run.lastAgentError } : {}),
+      ...(goal == null ? {} : { goal }),
+      ...(run === undefined ? {} : { queueLength: run.queueLength }),
       updatedAt: summary.updatedAt,
       blank: summary.blank,
       ...(typeof summary.projectionValues?.agentPreset === 'string'
@@ -180,16 +195,57 @@ export function projectCards(
   })
 }
 
+/**
+ * Create a projection cache retaining unchanged cards for memoized renderers.
+ * @returns a projector whose cache contains only the latest card set.
+ */
+export function createCardProjector(): typeof projectCards {
+  let previous = new Map<string, BoardCard>()
+  return (...args) => {
+    const cards = projectCards(...args).map(card => {
+      const cached = previous.get(card.id)
+      if (cached === undefined) return card
+      const keys = Object.keys(card) as (keyof BoardCard)[]
+      return keys.length === Object.keys(cached).length
+        && keys.every(key => card[key] === cached[key]) ? cached : card
+    })
+    previous = new Map(cards.map(card => [card.id, card]))
+    return cards
+  }
+}
+
 function searchable(card: BoardCard): string {
   return [
     card.id, card.title, card.workspace, card.cwd, card.preset, card.provider, card.model,
   ].filter((value): value is string => value !== undefined).join('\n').toLocaleLowerCase()
 }
 
-/** A card needing operator attention: waiting, blocked, or over the context threshold. */
+export type AttentionReason = 'approval' | 'question' | 'interaction' | 'failure' | 'blocked' | 'context'
+
+/**
+ * Choose the first actionable reason, with human interactions before diagnostics.
+ * @param card - current card projection.
+ * @param contextWarningPercent - configured context usage warning threshold.
+ * @returns the reason to open the session, or undefined when no attention is needed.
+ */
+export function attentionReason(card: BoardCard, contextWarningPercent: number): AttentionReason | undefined {
+  if (card.waiting || card.column === 'waiting') {
+    switch (card.interactionKind) {
+      case 'approval': return 'approval'
+      case 'question': return 'question'
+      // Interaction domains are extensible; their owning UI supplies the controls.
+      default: return 'interaction'
+    }
+  }
+  if (card.failure !== undefined) return 'failure'
+  if (card.column === 'blocked' || card.goal?.goal.phase === 'blocked') return 'blocked'
+  if ((card.contextPercent ?? 0) >= contextWarningPercent) return 'context'
+  return undefined
+}
+
+/** A card needing operator attention under the configured context threshold. */
 export function isAttention(card: BoardCard, contextWarningPercent: number): boolean {
-  return card.column === 'waiting' || card.column === 'blocked'
-    || (card.contextPercent ?? 0) >= contextWarningPercent
+  return attentionReason(card, contextWarningPercent) !== undefined
 }
 
 /**

@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { styles } from '../src/client/styles.ts'
-
-const COLUMNS = ['inbox', 'ready', 'running', 'waiting', 'blocked', 'done'] as const
+import { BOARD_COLUMNS as COLUMNS } from '../src/client/board.ts'
 
 describe('responsive and accessible styles', () => {
   it('defines narrow layouts, visible focus, tokens, and reduced motion', () => {

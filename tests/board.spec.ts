@@ -3,12 +3,20 @@ import type { SessionListState, SessionSummary } from '@deepseek-ai/dsh-api-sess
 import type { WorkspaceSnapshot } from '@deepseek-ai/dsh-api-workspace-controller/client'
 import type { SessionPendingInteractionSnapshot } from '@deepseek-ai/dsh-client-ui-session/client'
 import type { SessionId } from '@deepseek-ai/dsh-session/types'
+import type { GoalId, GoalProjection, GoalPhase } from '@deepseek-ai/dsh-goal/client'
 import {
-  aggregateStats, contextTone, dropColumn, filterCards, groupCards, projectCards, type BoardCard, type BoardColumn, type BoardFilters,
+  aggregateStats, attentionReason, contextTone, createCardProjector, dropColumn, filterCards, groupCards, projectCards, type BoardCard, type BoardColumn, type BoardFilters,
 } from '../src/client/board.ts'
 import { COLUMN_CARD_PAGE_SIZE, visibleColumnCards } from '../src/client/KanbanBoard.tsx'
 
 const sid = (value: string) => value as SessionId
+const goal = (phase: GoalPhase): GoalProjection => ({
+  goal: {
+    id: 'goal-one' as GoalId, revision: 1, phase, objective: 'Upgrade authentication', maxGoalRounds: 40,
+    ...(phase === 'blocked' ? { blockedReason: { code: 'missing-input', message: 'Select an authentication provider' } } : {}),
+  },
+  roundsStarted: 12, createdAt: 1, updatedAt: 2,
+})
 const summary = (id: string, overrides: Partial<SessionSummary> = {}): SessionSummary => ({
   id: sid(id), displayTitle: id, running: false, blank: true, updatedAt: 1, ...overrides,
 })
@@ -47,7 +55,7 @@ describe('board projection', () => {
   })
 
   it('maps authoritative state with precedence over manual placement', () => {
-    const pending: SessionPendingInteractionSnapshot = new Map([[sid('wait'), { type: 'approval' } as never]])
+    const pending: SessionPendingInteractionSnapshot = new Map([[sid('wait'), { kind: 'approval', key: 'approval:1', sessionId: sid('wait') }]])
     const rows = [
       summary('idle'),
       summary('run', { running: true }),
@@ -60,10 +68,63 @@ describe('board projection', () => {
       fail: { running: false, lastAgentError: 'provider unavailable', queueLength: 0 },
     }, { idle: 'ready', run: 'inbox', wait: 'inbox', fail: 'ready', done: 'ready' })
     expect(cards.map(card => [card.id, card.column])).toEqual([
-      ['idle', 'ready'], ['run', 'running'], ['wait', 'waiting'], ['fail', 'blocked'], ['done', 'done'],
+      ['idle', 'ready'], ['run', 'running'], ['wait', 'waiting'], ['fail', 'blocked'], ['done', 'idle'],
     ])
     expect(cards[0]?.subagents).toBe(1)
     expect(cards.at(-1)?.archived).toBe(true)
+  })
+
+  it('keeps stopped, cancelled, and unread finished sessions idle without a completed objective', () => {
+    const rows = ['stopped', 'cancelled', 'unread'].map(id => summary(id, { blank: false, completed: true }))
+    const cards = projectCards(sessions(rows), workspaces, new Map(), {}, {})
+    expect(cards.map(card => card.column)).toEqual(['idle', 'idle', 'idle'])
+    expect(aggregateStats(cards).completed).toBe(0)
+  })
+
+  it('uses durable goal phases without treating an active goal as a running agent', () => {
+    const phases = ['active', 'paused', 'blocked', 'complete'] as const
+    const rows = phases.map(phase => summary(phase, { blank: false, projectionValues: { goal: goal(phase) } }))
+    const cards = projectCards(sessions(rows), workspaces, new Map(), {}, { active: 'ready' })
+    expect(cards.map(card => card.column)).toEqual(['idle', 'idle', 'blocked', 'done'])
+    expect(cards[0]).toMatchObject({ running: false, goal: { roundsStarted: 12, goal: { maxGoalRounds: 40 } } })
+    expect(cards[2]?.goal?.goal.blockedReason?.message).toBe('Select an authentication provider')
+    expect(aggregateStats(cards).completed).toBe(1)
+  })
+
+  it('lets current execution, failures, pending input, and queued work override completed goals', () => {
+    const row = summary('task', { blank: false, projectionValues: { goal: goal('complete') } })
+    const project = (running: boolean, lastAgentError: string | null, queueLength: number, pending = new Map()) =>
+      projectCards(sessions([row]), workspaces, pending, { task: { running, lastAgentError, queueLength } }, {})[0]!
+    expect(project(true, null, 0).column).toBe('running')
+    expect(project(false, 'Failed', 0).column).toBe('blocked')
+    expect(project(false, null, 1)).toMatchObject({ column: 'idle', queueLength: 1 })
+    expect(project(true, null, 0, new Map([[sid('task'), { key: 'q1', kind: 'question', sessionId: sid('task') }]])).column).toBe('waiting')
+  })
+
+  it('clears removed goal and failure fields while retaining unrelated card identities', () => {
+    const project = createCardProjector()
+    const first = sessions([
+      summary('one', { blank: false, projectionValues: { goal: goal('blocked') } }), summary('two'),
+    ])
+    const before = project(first, workspaces, new Map(), { one: { running: false, lastAgentError: 'failure', queueLength: 0 } }, {})
+    const after = project(sessions([summary('one', { blank: false, projectionValues: { goal: null } }), first.byId[sid('two')]!]), workspaces, new Map(), {}, {})
+    expect(after[0]).not.toBe(before[0])
+    expect(after[0]).not.toHaveProperty('goal')
+    expect(after[0]).not.toHaveProperty('failure')
+    expect(after[0]?.column).toBe('idle')
+    expect(after[1]).toBe(before[1])
+  })
+
+  it('recomputes attention when an interaction is replaced or cleared', () => {
+    const row = summary('one', { running: true })
+    const reason = (kind?: string) => {
+      const pending = new Map(kind === undefined ? [] : [[sid('one'), { key: kind, kind, sessionId: sid('one') }]])
+      return attentionReason(projectCards(sessions([row]), workspaces, pending, {}, {})[0]!, 80)
+    }
+    expect(reason('approval')).toBe('approval')
+    expect(reason('question')).toBe('question')
+    expect(reason('external-domain')).toBe('interaction')
+    expect(reason()).toBeUndefined()
   })
 
   it('projects model, token, step, and context facts without inventing missing metrics', () => {

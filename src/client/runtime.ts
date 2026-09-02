@@ -1,5 +1,6 @@
 /** Live Session-face projection for facts absent from global list rows. */
 import type { ISessions, SessionFace, SessionListState } from '@deepseek-ai/dsh-api-session-controller/client'
+import type { SessionId } from '@deepseek-ai/dsh-session/types'
 import { notifySubscribers, type ObservableSnapshot } from '@deepseek-ai/dsh-client-store'
 import type { RuntimeSessionState, RuntimeSnapshot } from './board.ts'
 
@@ -30,32 +31,43 @@ export interface RuntimeSource extends ObservableSnapshot<RuntimeSnapshot> {
  */
 export function createRuntimeSource(sessions: ISessions): RuntimeSource {
   const listeners = new Set<() => void>()
-  const subscriptions = new Map<string, SessionSubscription>()
+  const subscriptions = new Map<SessionId, SessionSubscription>()
   let snapshot: RuntimeSnapshot = {}
   let disposed = false
 
-  const publish = (): void => {
-    const next: Record<string, RuntimeSessionState> = {}
-    for (const [id, entry] of subscriptions) next[id] = runtimeState(entry.face)
-    if (JSON.stringify(next) === JSON.stringify(snapshot)) return
-    snapshot = next
+  const update = (id: SessionId, face: SessionFace): void => {
+    if (disposed || subscriptions.get(id)?.face !== face) return
+    const next = runtimeState(face)
+    const previous = snapshot[id]
+    if (previous?.running === next.running
+      && previous.lastAgentError === next.lastAgentError
+      && previous.queueLength === next.queueLength) return
+    snapshot = { ...snapshot, [id]: next }
     notifySubscribers(listeners, '[ds-kanban/runtime]')
   }
 
   const reconcile = (list: SessionListState): void => {
+    if (disposed) return
+    let next: Record<string, RuntimeSessionState> | undefined
     const ids = new Set<string>(list.ids)
     for (const [id, entry] of subscriptions) {
-      if (ids.has(id)) continue
+      if (ids.has(id) && sessions.binding(id)?.session === entry.face) continue
       entry.dispose()
       subscriptions.delete(id)
+      next ??= { ...snapshot }
+      delete next[id]
     }
     for (const id of list.ids) {
       if (subscriptions.has(id)) continue
       const face = sessions.binding(id)?.session
       if (face === undefined) continue
-      subscriptions.set(id, { face, dispose: face.subscribe(publish) })
+      subscriptions.set(id, { face, dispose: face.subscribe(() => { update(id, face) }) })
+      next ??= { ...snapshot }
+      next[id] = runtimeState(face)
     }
-    publish()
+    if (next === undefined) return
+    snapshot = next
+    notifySubscribers(listeners, '[ds-kanban/runtime]')
   }
 
   const disposeList = sessions.list.subscribe(() => { reconcile(sessions.list.getSnapshot()) })

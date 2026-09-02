@@ -24,8 +24,10 @@ jobs:
           pnpm pack --pack-destination .artifacts
           TARBALL="$(ls .artifacts/dsh-ds-kanban-*.tgz | head -1)"
           tar -tzf "$TARBALL" | grep -E "package/lib/(index.js|client.js)|package/cordis.patch.yml"
+          mkdir -p pack-dist
+          cp "$TARBALL" pack-dist/
       - uses: actions/upload-artifact@v4
         with:
           name: pack-tarball
-          path: .artifacts/dsh-ds-kanban-*.tgz
+          path: pack-dist/dsh-ds-kanban-*.tgz
           if-no-files-found: error

@@ -1,3 +1,4 @@
 node_modules/
 .artifacts/
+pack-dist/
 tsconfig.tsbuildinfo

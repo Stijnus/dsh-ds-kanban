@@ -19,11 +19,14 @@ jobs:
       - run: pnpm build
       - run: pnpm test
       - name: Pack tarball
-        run: pnpm pack --pack-destination .artifacts
+        run: |
+          pnpm pack --pack-destination .artifacts
+          mkdir -p pack-dist
+          cp .artifacts/dsh-ds-kanban-*.tgz pack-dist/
       - uses: actions/upload-artifact@v4
         with:
           name: pack-tarball
-          path: .artifacts/dsh-ds-kanban-*.tgz
+          path: pack-dist/dsh-ds-kanban-*.tgz
           if-no-files-found: error
 
   github-release:
